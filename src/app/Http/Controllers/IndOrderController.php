@@ -12,10 +12,31 @@ use App\IndOrderItem;
 use App\OrderItem;
 use Illuminate\Support\Facades\Input;
 use Excel;
-
-
+use App\RolePermission;
+use App\Permission;
+use Auth;
 class IndOrderController extends Controller
 {
+    public function __construct(Request $request)
+    {
+        $this->middleware('auth');
+        
+        $this->middleware(function ($request, $next) {
+            $this->id = Auth::user()->id;
+            $userPermission = RolePermission::where('user_id', Auth::user()->id)->get();
+            $permArr = [];
+            foreach ($userPermission as $key => $perm) {
+                $permArr[] = $perm->permission_id;
+            }
+            $permission = Permission::wherein('id', $permArr)->pluck('url')->toArray();
+            $permission[] =  '/admin';
+
+            if (!in_array('/admin/ind-orders', $permission)) {
+                return redirect('admin');
+            }
+            return $next($request);
+        });
+    }
     public function index(Request $request) {
 
         

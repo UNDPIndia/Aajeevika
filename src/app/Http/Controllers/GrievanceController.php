@@ -58,6 +58,14 @@ class GrievanceController extends Controller
                 $q->orWhere('ticket_id', $searchString);
             });
         }
+        if (Auth::user()->role_id == '4') {
+            $district = Auth::user()->district;
+            $query->where('users.district', '=', "$district");
+        }
+        if (Auth::user()->role_id == '11') {
+            $block = Auth::user()->block;
+            $query->where('users.block', '=', "$block");
+        } 
         $grievanceData =  $query->paginate(10);
 
         return view('grievance.index', ['grievanceData'=>$grievanceData]);

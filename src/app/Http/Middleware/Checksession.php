@@ -22,14 +22,14 @@ class Checksession
         $user = Auth::user();
 
         if (Auth::user()) {
-            if(Auth::user()->role_id == 4 || Auth::user()->role_id == 5) {
+            if(Auth::user()->role_id == 4 || Auth::user()->role_id == 5 || Auth::user()->role_id == 11) {
                 // echo "asdf";
                 // die;
                 //Auth::logout();
                 return redirect('/admin');
             }
 
-            if (Auth::user()->role_id == 2 || Auth::user()->role_id == 3) {
+            if (Auth::user()->role_id == 2 || Auth::user()->role_id == 3 || Auth::user()->role_id == 7 || Auth::user()->role_id == 8 || Auth::user()->role_id == 9) {
                 if (Auth::user()->is_otp_verified == 0) {
                     return redirect('/verifyotp/signup');
                 }
@@ -49,14 +49,14 @@ class Checksession
             if ($user->role_id == 2) {
                 if ($user->is_document_added == 1) {
                     if ($document->is_adhar_verify == 0) {
-                        return redirect('/profile')->withErrors('Please Verify Adhar Card');
+                       // return redirect('/profile')->withErrors('Please Verify Adhar Card');
                     }
                 }
             }
             if ($user->role_id == 3) {
                 if ($user->is_document_added == 1) {
                     if (($document->is_adhar_verify == 0) || ($document->is_pan_verify == 0) || ($document->is_brn_verify == 0)) {
-                        return redirect('/profile')->withErrors('We have recieved your documents, Please wait till we verify them.');
+                        //return redirect('/profile')->withErrors('We have recieved your documents, Please wait till we verify them.');
                     }
                 }
             }

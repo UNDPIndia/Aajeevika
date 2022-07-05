@@ -20,7 +20,7 @@ class Verifyadmin
     public function handle($request, Closure $next)
     {
         if (Auth::user()) {
-            if (Auth::user()->role_id !== "4" && Auth::user()->role_id !== "5") {
+            if (Auth::user()->role_id !== "4" && Auth::user()->role_id !== "5" && Auth::user()->role_id !== "11") {
 
                 // if(Auth::user()->is_blocked_byadmin == 1) {
 

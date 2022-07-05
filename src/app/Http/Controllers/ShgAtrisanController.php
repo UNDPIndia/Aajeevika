@@ -49,23 +49,25 @@ class ShgAtrisanController extends Controller
         $districtList = City::where('state_id', 39)->where('is_district',1)->get();
 
         $query = DB::table('users')
-        ->join('states', 'users.state_id', '=', 'states.id')
-        ->join('cities', 'users.district', '=', 'cities.id')
+        ->leftjoin('states', 'users.state_id', '=', 'states.id')
+        ->leftjoin('cities', 'users.district', '=', 'cities.id')
         ->leftjoin('blocks', 'users.block', '=', 'blocks.id')
         ->leftjoin('addresses', 'users.id', '=', 'addresses.user_id')
         ->select('users.*', 'cities.name as district_name', 'blocks.name as block_name','states.name as state_name', 'addresses.pincode', 'addresses.address_line_one', 'addresses.address_line_two')
-        ->where('addresses.address_type', 'registered')
+        //->where('addresses.address_type', 'registered')
+        ->where('users.district','!=',null)
+        
         ->whereIn('users.role_id', [2,3,7,8])->orderBy('users.id', 'desc');
         $keyword = $request->s;
         if ($request->has('s')) {
             //dd($keyword);
             $query = DB::table('users')
-                ->join('states', 'users.state_id', '=', 'states.id')
-                ->join('cities', 'users.district', '=', 'cities.id')
+                ->leftjoin('states', 'users.state_id', '=', 'states.id')
+                ->leftjoin('cities', 'users.district', '=', 'cities.id')
                 ->leftjoin('blocks', 'users.block', '=', 'blocks.id')
                 ->leftjoin('addresses', 'users.id', '=', 'addresses.user_id')
                 ->select('users.*', 'cities.name as district_name', 'blocks.name as block_name','states.name as state_name', 'addresses.pincode', 'addresses.address_line_one', 'addresses.address_line_two')
-
+                ->where('users.district','!=',null)
                 ->where(function ($query1) use ($keyword, $query) {
                     $query1->where('users.name', 'LIKE', '%'.$keyword.'%');
                     $query1->orWhere('users.email', $keyword);
@@ -73,7 +75,7 @@ class ShgAtrisanController extends Controller
                 })
 
                 ->where('addresses.address_type', 'registered')
-                ->whereIn('users.role_id', [2,3])
+                ->whereIn('users.role_id', [2,3,7,8])
                 ->orderBy('users.id', 'desc');
         }
 
@@ -82,7 +84,10 @@ class ShgAtrisanController extends Controller
             $district = Auth::user()->district;
             $query->where('users.district', '=', "$district");
         }
-        
+        if (Auth::user()->role_id == '11') {
+            $block = Auth::user()->block;
+            $query->where('users.block', '=', "$block");
+        }
 
         //for export
         $shgartisanData1 = $query->get();
@@ -175,6 +180,14 @@ class ShgAtrisanController extends Controller
                 ->select('users.*', 'cities.name as district_name', 'blocks.name as block_name','states.name as state_name', 'addresses.pincode', 'addresses.address_line_one', 'addresses.address_line_two')
                 ->where('addresses.address_type', 'registered')
                 ->whereIn('users.role_id', [3])->orderBy('users.id', 'desc');
+                if (Auth::user()->role_id == '4') {
+                    $district = Auth::user()->district;
+                    $query->where('users.district', '=', "$district");
+                }
+                if (Auth::user()->role_id == '11') {
+                    $block = Auth::user()->block;
+                    $query->where('users.block', '=', "$block");
+                }
                 $data = $query->get();
 
 
@@ -249,13 +262,21 @@ class ShgAtrisanController extends Controller
                
                 $query = DB::table('users')
                 ->where('users.district', $district)
-                ->join('states', 'users.state_id', '=', 'states.id')
-                ->join('cities', 'users.district', '=', 'cities.id')
+                ->leftjoin('states', 'users.state_id', '=', 'states.id')
+                ->leftjoin('cities', 'users.district', '=', 'cities.id')
                 ->leftjoin('blocks', 'users.block', '=', 'blocks.id')
                 ->leftjoin('addresses', 'users.id', '=', 'addresses.user_id')
                 ->select('users.*', 'cities.name as district_name', 'blocks.name as block_name','states.name as state_name', 'addresses.pincode', 'addresses.address_line_one', 'addresses.address_line_two')
                 ->where('addresses.address_type', 'registered')
-                ->where('users.role_id', 3)->orderBy('users.id', 'desc');
+                ->whereIn('users.role_id', [2,3,7,8])->orderBy('users.id', 'desc');
+                if (Auth::user()->role_id == '4') {
+                    $district = Auth::user()->district;
+                    $query->where('users.district', '=', "$district");
+                }
+                if (Auth::user()->role_id == '11') {
+                    $block = Auth::user()->block;
+                    $query->where('users.block', '=', "$block");
+                }
                 $data = $query->get();
 
                 return Excel::create('AllShgArtisanaDistrictwise', function ($excel) use ($data) {
@@ -328,6 +349,14 @@ class ShgAtrisanController extends Controller
                 ->select('users.*', 'cities.name as district_name', 'blocks.name as block_name','states.name as state_name', 'addresses.pincode', 'addresses.address_line_one', 'addresses.address_line_two')
                 ->where('addresses.address_type', 'registered')
                 ->whereIn('users.role_id', [2])->orderBy('users.id', 'desc');
+                if (Auth::user()->role_id == '4') {
+                    $district = Auth::user()->district;
+                    $query->where('users.district', '=', "$district");
+                }
+                if (Auth::user()->role_id == '11') {
+                    $block = Auth::user()->block;
+                    $query->where('users.block', '=', "$block");
+                }
                 $data = $query->get();
 
 
@@ -399,8 +428,21 @@ class ShgAtrisanController extends Controller
                 $data = ProductMaster::with('user', 'user.address_registerd', 'user.userdistrict')
                 ->select('user_id')
                 ->where(['categoryId'=> $category_id,'is_active' => 1, 'is_draft' =>  0])
-                ->distinct()
-                ->get();
+                ->distinct();
+                if (Auth::user()->role_id == '4') {
+                    $district = Auth::user()->district;
+                    $data->whereHas('user', function ($data) use ($district) {
+                        $data->where('district', '=', $district);
+                    });
+                }
+                if (Auth::user()->role_id == '11') {
+                    $block = Auth::user()->block;
+                    $data->whereHas('user', function ($data) use ($block) {
+                        $data->where('block', '=', $block);
+                    });
+                    
+                }
+                $data= $data->get();
 
 
 
@@ -480,7 +522,22 @@ class ShgAtrisanController extends Controller
                 $data =  ProductMaster::with('user', 'user.address_registerd', 'user.userdistrict')
                 ->select('user_id')
                 ->where(['categoryId'=> $category_id,'subcategoryId'=>$subcategory_id])
-                ->distinct()->get();
+                ->distinct();
+                if (Auth::user()->role_id == '4') {
+                    $district = Auth::user()->district;
+                    $data->whereHas('user', function ($data) use ($district) {
+                        $data->where('district', '=', $district);
+                    });
+                }
+                if (Auth::user()->role_id == '11') {
+                    $block = Auth::user()->block;
+                    $data->whereHas('user', function ($data) use ($block) {
+                        $data->where('block', '=', $block);
+                    });
+                    
+                }
+                $data = $data->get();
+                
 
                 return Excel::create('subcategorywise', function ($excel) use ($data) {
                     $excel->sheet('mySheet', function ($sheet) use ($data) {
@@ -554,7 +611,21 @@ class ShgAtrisanController extends Controller
                 $subcategory_id = $request->subcategory_name;
                 $material_id = $request->material_name;
 
-                $data =  ProductMaster::with('user', 'user.address_registerd', 'user.userdistrict')->select('user_id')->where(['categoryId'=> $category_id,'subcategoryId'=>$subcategory_id, 'material_id'=> $material_id])->distinct()->get();
+                $data =  ProductMaster::with('user', 'user.address_registerd', 'user.userdistrict')->select('user_id')->where(['categoryId'=> $category_id,'subcategoryId'=>$subcategory_id, 'material_id'=> $material_id])->distinct();
+                if (Auth::user()->role_id == '4') {
+                    $district = Auth::user()->district;
+                    $data->whereHas('user', function ($data) use ($district) {
+                        $data->where('district', '=', $district);
+                    });
+                }
+                if (Auth::user()->role_id == '11') {
+                    $block = Auth::user()->block;
+                    $data->whereHas('user', function ($data) use ($block) {
+                        $data->where('block', '=', $block);
+                    });
+                    
+                }
+                $data = $data->get();
 
                 return Excel::create('materialwise', function ($excel) use ($data) {
                     $excel->sheet('mySheet', function ($sheet) use ($data) {
@@ -628,7 +699,23 @@ class ShgAtrisanController extends Controller
                 $material_id = $request->material_name;
                 $template_id = $request->products_name;
 
-                $data =  ProductMaster::with('user', 'user.address_registerd', 'user.userdistrict')->select('user_id')->where(['is_active' => 1, 'is_draft' =>  0,'categoryId'=> $category_id,'subcategoryId'=>$subcategory_id, 'material_id'=> $material_id, 'template_id'=>$template_id])->groupBy('user_id')->get();
+                $data =  ProductMaster::with('user', 'user.address_registerd', 'user.userdistrict')->select('user_id')->where(['categoryId'=> $category_id,'subcategoryId'=>$subcategory_id, 'material_id'=> $material_id, 'template_id'=>$template_id])->distinct();
+                if (Auth::user()->role_id == '4') {
+                    $district = Auth::user()->district;
+                    $data->whereHas('user', function ($data) use ($district) {
+                        $data->where('district', '=', $district);
+                    });
+                }
+                if (Auth::user()->role_id == '11') {
+                    $block = Auth::user()->block;
+                    $data->whereHas('user', function ($data) use ($block) {
+                        $data->where('block', '=', $block);
+                    });
+                    
+                }
+                //$data->groupBy('user_id');
+                //print_r($data->getQuery()); die;
+                $data = $data->get();
 
                 return Excel::create('productnamewise', function ($excel) use ($data) {
                     $excel->sheet('mySheet', function ($sheet) use ($data) {
@@ -708,6 +795,14 @@ class ShgAtrisanController extends Controller
                 ->select('users.*', 'cities.name as district_name', 'blocks.name as block_name','states.name as state_name', 'addresses.pincode', 'addresses.address_line_one', 'addresses.address_line_two')
                 ->where('addresses.address_type', 'registered')
                 ->where('users.role_id', 3)->orderBy('users.id', 'desc');
+                if (Auth::user()->role_id == '4') {
+                    $district = Auth::user()->district;
+                    $query->where('users.district', '=', "$district");
+                }
+                if (Auth::user()->role_id == '11') {
+                    $block = Auth::user()->block;
+                    $query->where('users.block', '=', "$block");
+                }
             }
             if ($request->exportlist == 'artisan') {
                 //return 'artisan';
@@ -719,6 +814,14 @@ class ShgAtrisanController extends Controller
                 ->select('users.*', 'cities.name as district_name', 'blocks.name as block_name','states.name as state_name', 'addresses.pincode', 'addresses.address_line_one', 'addresses.address_line_two')
                 ->where('addresses.address_type', 'registered')
                 ->where('users.role_id', 2)->orderBy('users.id', 'desc');
+                if (Auth::user()->role_id == '4') {
+                    $district = Auth::user()->district;
+                    $query->where('users.district', '=', "$district");
+                }
+                if (Auth::user()->role_id == '11') {
+                    $block = Auth::user()->block;
+                    $query->where('users.block', '=', "$block");
+                }
             }
 
 
@@ -727,13 +830,21 @@ class ShgAtrisanController extends Controller
                
                 $query = DB::table('users')
                 ->where('users.district', $district)
-                ->join('states', 'users.state_id', '=', 'states.id')
-                ->join('cities', 'users.district', '=', 'cities.id')
+                ->leftjoin('states', 'users.state_id', '=', 'states.id')
+                ->leftjoin('cities', 'users.district', '=', 'cities.id')
                 ->leftjoin('blocks', 'users.block', '=', 'blocks.id')
                 ->leftjoin('addresses', 'users.id', '=', 'addresses.user_id')
                 ->select('users.*', 'cities.name as district_name', 'blocks.name as block_name','states.name as state_name', 'addresses.pincode', 'addresses.address_line_one', 'addresses.address_line_two')
-                ->where('addresses.address_type', 'registered')
-                ->where('users.role_id', 3)->orderBy('users.id', 'desc');
+                //->where('addresses.address_type', 'registered')
+                ->whereIn('users.role_id', [2,3,7,8])->orderBy('users.id', 'desc');
+                if (Auth::user()->role_id == '4') {
+                    $district = Auth::user()->district;
+                    $query->where('users.district', '=', "$district");
+                }
+                if (Auth::user()->role_id == '11') {
+                    $block = Auth::user()->block;
+                    $query->where('users.block', '=', "$block");
+                }
             }
 
             //all listed
@@ -755,10 +866,17 @@ class ShgAtrisanController extends Controller
                 ->select('users.*', 'cities.name as district_name','blocks.name as block_name', 'states.name as state_name', 'addresses.pincode', 'addresses.address_line_one', 'addresses.address_line_two')
                 ->where('addresses.address_type', 'registered')
 
-                ->whereIn('users.role_id', [2,3])
+                ->whereIn('users.role_id', [2,3,7,8])
                 ->whereIn('users.id', $usersids)
                 ->orderBy('users.id', 'desc');
-
+                if (Auth::user()->role_id == '4') {
+                    $district = Auth::user()->district;
+                    $query->where('users.district', '=', "$district");
+                }
+                if (Auth::user()->role_id == '11') {
+                    $block = Auth::user()->block;
+                    $query->where('users.block', '=', "$block");
+                }
                 $shgartisanData = $query->paginate(10);
 
                 $return_array = array();
@@ -788,10 +906,17 @@ class ShgAtrisanController extends Controller
                 ->select('users.*', 'cities.name as district_name', 'blocks.name as block_name','states.name as state_name', 'addresses.pincode', 'addresses.address_line_one', 'addresses.address_line_two')
                 ->where('users.name', 'LIKE', '%' . Input::get('s') . '%')
                 ->where('addresses.address_type', 'registered')
-                ->whereIn('users.role_id', [2,3])
+                ->whereIn('users.role_id', [2,3,7,8])
                 ->whereIn('users.id', $usersids)
                 ->orderBy('users.id', 'desc');
-
+                if (Auth::user()->role_id == '4') {
+                    $district = Auth::user()->district;
+                    $query->where('users.district', '=', "$district");
+                }
+                if (Auth::user()->role_id == '11') {
+                    $block = Auth::user()->block;
+                    $query->where('users.block', '=', "$block");
+                }
                 $shgartisanData = $query->paginate(10);
 
 
@@ -829,7 +954,14 @@ class ShgAtrisanController extends Controller
                 ->whereIn('users.role_id', [2,3,7,8])
                 ->whereIn('users.id', $usersids)
                 ->orderBy('users.id', 'desc');
-
+                if (Auth::user()->role_id == '4') {
+                    $district = Auth::user()->district;
+                    $query->where('users.district', '=', "$district");
+                }
+                if (Auth::user()->role_id == '11') {
+                    $block = Auth::user()->block;
+                    $query->where('users.block', '=', "$block");
+                }
                 $shgartisanData = $query->paginate(10);
                 return view('shgartisan.index', ['shgartisanData' => $shgartisanData,'districtList'=>$districtList]);
 
@@ -857,7 +989,14 @@ class ShgAtrisanController extends Controller
                 ->whereIn('users.role_id', [2,3,7,8])
                 ->whereIn('users.id', $usersids)
                 ->orderBy('users.id', 'desc');
-
+                if (Auth::user()->role_id == '4') {
+                    $district = Auth::user()->district;
+                    $query->where('users.district', '=', "$district");
+                }
+                if (Auth::user()->role_id == '11') {
+                    $block = Auth::user()->block;
+                    $query->where('users.block', '=', "$block");
+                }
                 $shgartisanData = $query->paginate(10);
                 return view('shgartisan.index', ['shgartisanData' => $shgartisanData, 'districtList'=>$districtList]);
 

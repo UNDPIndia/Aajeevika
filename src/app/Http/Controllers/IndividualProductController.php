@@ -11,6 +11,8 @@ use App\IndCategory;
 use App\Material;
 use App\ProductMaster;
 use App\IndProductMaster;
+use App\IndividualInterestList;
+
 use App\RolePermission;
 use App\Permission;
 use App\Role;
@@ -41,7 +43,7 @@ class IndividualProductController extends Controller
             $permission = Permission::wherein('id', $permArr)->pluck('url')->toArray();
             $permission[] =  '/admin';
 
-            if (!in_array('/admin/category', $permission)) {
+            if (!in_array('/admin/individual/products', $permission)) {
                 return redirect('admin');
             }
             return $next($request);
@@ -52,6 +54,18 @@ class IndividualProductController extends Controller
     public function index(Request $request)
     {
 
+
+        //add product to interest
+        $proAll = IndProductMaster::get();
+        foreach($proAll as $all){
+            $interestProduct['product_id'] = $all->id;
+            $interestProduct['name_en'] = $all->name_en;
+            $interestProduct['name_hi'] = $all->name_hi;
+            $interestProduct['image'] = $all->image;
+             //IndividualInterestList::create($interestProduct); 
+        }
+       
+        
         $query = DB::table('ind_product_masters')
         ->leftJoin('ind_categories','ind_categories.id','=','ind_product_masters.cat_id')
         ->select('ind_product_masters.*','ind_categories.name_en as category_name')
@@ -182,10 +196,18 @@ class IndividualProductController extends Controller
                 $profileImage = date('YmdHis') . "." . $files->getClientOriginalExtension();
                 $aa =  $files->move(public_path("images/ind_product"), $profileImage);
                 $input['image'] = "images/ind_product/".$profileImage;
+            }else{
+                $input['image'] = '';
             }
 
             
             $category = IndProductMaster::create($input);
+            $interestProduct['product_id'] = $category->id;
+            $interestProduct['name_en'] = $request->name_en;
+            $interestProduct['name_hi'] = $request->name_hi;
+            $interestProduct['image'] = $input['image'];
+            //$interestProduct['status'] = $request->status;
+            $addinterest = IndividualInterestList::create($interestProduct); //add product as interest
             $queryStatus = "Successful";
             return redirect('admin/individual/products')->with('message', $queryStatus);
         }
@@ -235,6 +257,16 @@ class IndividualProductController extends Controller
                 // ->select('categories.*', 'users.name as admin_name')
                 // ->get();
                 // return view('category.index', ['categoryData' => $categoryData]);
+                //$interestProduct['product_id'] = $category->id;
+               
+               //$interestProduct['status'] = $request->status;
+                 $interest = IndividualInterestList::where('product_id', $id)->first(); 
+                 if($interest){
+                    $interestProduct['name_en'] = $categoryUpdate->name_en;
+                    $interestProduct['name_hi'] = $categoryUpdate->name_hi;
+                    $interestProduct['image'] = $categoryUpdate->image;
+                     $interest->update($interestProduct);
+                 }
                 return redirect('admin/individual/products');
             }
         }
@@ -256,6 +288,7 @@ class IndividualProductController extends Controller
         $individualUpdate  = IndProductMaster::where('id', $id)->first();
         if ($individualUpdate) {
             $cats = $individualUpdate->update($input);
+            IndividualInterestList::where('product_id', $id)->update(['status'=>$status]); 
             return redirect('admin/individual/products');
         }
     }

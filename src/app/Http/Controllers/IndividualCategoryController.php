@@ -38,7 +38,7 @@ class IndividualCategoryController extends Controller
             $permission = Permission::wherein('id', $permArr)->pluck('url')->toArray();
             $permission[] =  '/admin';
 
-            if (!in_array('/admin/category', $permission)) {
+            if (!in_array('/admin/indcategory', $permission)) {
                 return redirect('admin');
             }
             return $next($request);

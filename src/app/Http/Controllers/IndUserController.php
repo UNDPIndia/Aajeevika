@@ -33,7 +33,7 @@ class IndUserController extends Controller
             }
             $permission = Permission::wherein('id', $permArr)->pluck('url')->toArray();
             $permission[] =  '/admin';
-            if (!in_array('/admin/users', $permission)) {
+            if (!in_array('/admin/ind-users', $permission)) {
                 return redirect('admin');
             }
             return $next($request);
@@ -59,6 +59,7 @@ class IndUserController extends Controller
             ->leftjoin('addresses', 'users.id', '=', 'addresses.user_id')
             ->select('users.*', 'cities.name as district_name','states.name as state_name', 'addresses.pincode', 'addresses.address_line_one', 'addresses.address_line_two',
                      'blocks.name as block_name')
+                     ->where('users.district','!=',null)
             ->where('users.role_id', '9')->orderBy('users.id', 'desc');
 
 
@@ -73,6 +74,14 @@ class IndUserController extends Controller
 
            
         }
+        if (Auth::user()->role_id == '4') {
+            $district = Auth::user()->district;
+            $query->where('users.district', '=', "$district");
+        }
+        if (Auth::user()->role_id == '11') {
+            $block = Auth::user()->block;
+            $query->where('users.block', '=', "$block");
+        }        
         $userData1  =  $query->get()->toArray();
 
 
@@ -189,6 +198,14 @@ class IndUserController extends Controller
                 ->leftjoin('addresses', 'users.id', '=', 'addresses.user_id')
                 ->select('users.*', 'cities.name as district_name','states.name as state_name', 'addresses.pincode', 'addresses.address_line_one', 'addresses.address_line_two',
                          'blocks.name as block_name');
+                         if (Auth::user()->role_id == '4') {
+                            $district = Auth::user()->district;
+                            $innerquery->where('users.district', '=', "$district");
+                        }
+                        if (Auth::user()->role_id == '11') {
+                            $block = Auth::user()->block;
+                            $innerquery->where('users.block', '=', "$block");
+                        }        
                 $userData1  =  $innerquery->get();
 
                 $data = $userData1;
@@ -252,6 +269,7 @@ class IndUserController extends Controller
                 $innerquery = User::whereIn('users.role_id', [9])->orderBy('id', 'DESC');
                 $innerquery->where('users.state_id', '=', Input::get('state_name'));
                 $innerquery->where('users.role_id',9);
+                
                 $userData1  =  $innerquery->paginate(10);
                 $userData = $userData1;
 
@@ -266,6 +284,14 @@ class IndUserController extends Controller
                 ->leftjoin('addresses', 'users.id', '=', 'addresses.user_id')
                 ->select('users.*', 'cities.name as district_name','states.name as state_name', 'addresses.pincode', 'addresses.address_line_one', 'addresses.address_line_two',
                          'blocks.name as block_name');
+                         if (Auth::user()->role_id == '4') {
+                            $district = Auth::user()->district;
+                            $innerquery->where('users.district', '=', "$district");
+                        }
+                        if (Auth::user()->role_id == '11') {
+                            $block = Auth::user()->block;
+                            $innerquery->where('users.block', '=', "$block");
+                        }    
                 $userData1  =  $innerquery->paginate(10);
 
                 $userData = $userData1;

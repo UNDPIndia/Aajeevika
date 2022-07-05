@@ -17,8 +17,10 @@ use App\Country;
 use App\State;
 use App\City;
 use App\Documents;
+use Illuminate\Support\Facades\Input;
 use App\ProductMaster;
-
+use Artisan;
+use App\Helpers\Helper;
 class RegisterController extends Controller
 {
     /*
@@ -72,7 +74,7 @@ class RegisterController extends Controller
     {
         return Validator::make($data, [
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
+            'email' => 'string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
             'mobile'=>'required|min:10|max:10|unique:users'
 
@@ -122,6 +124,7 @@ class RegisterController extends Controller
 
         }
 
+        
 
         $user = User::create([
             'name' => $data['name'],
@@ -141,11 +144,132 @@ class RegisterController extends Controller
             $addAddress = Address::create(['user_id' => $user->id,'user_role_id' => $user->role_id, 'country' => $user->country_id, 'state' => $user->state_id, 'district' => $user->district, 'address_type' => 'personal']);
         }
 
-        $otp  = rand(1111, 9999);
+        //$otp  = rand(1111, 9999);
+        $otp  = 1234;
         $this->sendotp($data['mobile'], $otp);
         Otphistory::create(['mobile_no' => $user->mobile, 'otp' => $otp ]);
         return $user;
     }
+
+
+    public function register(Request $data)
+    {
+       /* $input = $data;
+        if(isset($data['is_promotional_mail'] ) && isset($data['is_promotional_mail'] )   == true) {
+
+            $url = "https://undp.svaptech.tk/blog/wp-json/apicall/newletter";
+            // $newsletterdata = ['user'=> json_encode()];
+            $post = curl_init();
+            //curl_setopt($post, CURLOPT_SSLVERSION, 5); // uncomment for systems supporting TLSv1.1 only
+            curl_setopt($post, CURLOPT_SSLVERSION, 6); // use for systems supporting TLSv1.2 or comment the line
+            curl_setopt($post, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($post, CURLOPT_URL, $url);
+            // curl_setopt($post, CURLOPT_POST, json_encode($input));
+            curl_setopt($post, CURLOPT_POSTFIELDS, http_build_query($input));
+            curl_setopt($post, CURLOPT_RETURNTRANSFER, 1);
+            $result = curl_exec($post); //result from mobile seva server
+            echo $result; //output from server displayed
+            curl_close($post);
+
+
+            // $url = "https://undp.svaptech.tk/blogkn/wp-json/apicall/newletter";
+            // // $newsletterdata = ['user'=> json_encode()];
+            // $post = curl_init();
+            // //curl_setopt($post, CURLOPT_SSLVERSION, 5); // uncomment for systems supporting TLSv1.1 only
+            // curl_setopt($post, CURLOPT_SSLVERSION, 6); // use for systems supporting TLSv1.2 or comment the line
+            // curl_setopt($post, CURLOPT_SSL_VERIFYPEER, false);
+            // curl_setopt($post, CURLOPT_URL, $url);
+            // // curl_setopt($post, CURLOPT_POST, json_encode($input));
+            // curl_setopt($post, CURLOPT_POSTFIELDS, http_build_query($input));
+            // curl_setopt($post, CURLOPT_RETURNTRANSFER, 1);
+            // $result = curl_exec($post); //result from mobile seva server
+            // echo $result; //output from server displayed
+            // curl_close($post);
+
+        } 
+        */
+        //return $data['role_id'];
+        if($data['role_id'] != '1'){
+            //return 10;
+            $this->validate($data, [
+                'name' => 'required|regex:/^[\pL\s\-]+$/u|max:255',
+                'email' => 'string|email|max:255|unique:users',
+                'password' => 'required|string|min:8|confirmed',
+                'mobile'=>'required|min:10|max:10|unique:users',
+                'profileImage'=>'required|max:30000|mimes:jpg,jpeg,png,svg'
+                ]);
+        }
+        elseif(isset($data['email'])&&!empty($data['email']))
+        {
+            $this->validate($data, [
+                'name' => 'required|string|max:255',
+                'email' => 'string|email|max:255|unique:users',
+                'password' => 'required|string|min:8|confirmed',
+                'mobile'=>'required|min:10|max:10|unique:users'
+                ]);
+
+        }else{
+            $this->validate($data, [
+                'name' => 'required|string|max:255',
+                'password' => 'required|string|min:8|confirmed',
+                'mobile'=>'required|min:10|max:10|unique:users'
+                ]);
+        }
+
+        
+        if ($files = $data->file('profileImage')) {
+
+            $files = Input::file('profileImage');
+            $profileImage = date('YmdHis') . "." . $files->getClientOriginalExtension();
+            $destinationPath = public_path("images/users");
+
+        // This will store only the filename. Update with full path if you like
+            $data['image'] = "images/users/".$profileImage; 
+            $uploadSuccess = $files->move($destinationPath, $profileImage);
+        }       
+
+        $user = User::create([
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'password' => Hash::make($data['password']),
+            'mobile' => $data['mobile'],
+            'country_id' => $data['country_id'],
+            'state_id' =>$data['state_id'],
+            'district' => $data['district'],
+            'member_id' => $data['member_id'],
+            'profileImage'=>$data['image'],
+            'organization_name' => $data['organization_name'],
+            'member_designation' => $data['member_designation'],
+            'block' => $data['block'],
+            'role_id' => !empty($data['role_id'])?$data['role_id']:1,
+            'api_token' => Str::random(60),
+            'city_id' => $data['district'],
+            'language' => 'en',
+            
+        ]);
+
+        \Auth::login($user);
+
+        if ($user->role_id == 1) {
+            $addAddress = Address::create(['user_id' => $user->id,'user_role_id' => $user->role_id, 'country' =>'101', 'state' =>'39', 'district' => $data['district'], 'address_type' => 'personal']);
+        } else {
+            $addAddress = Address::create(['user_id' => $user->id,'user_role_id' => $user->role_id, 'country' =>'101', 'state' =>'39', 'district' => $data['district'], 'address_type' => 'registered']);
+        }
+
+        //$otp  = rand(1111, 9999);
+        $otp  = 1234;
+        //   $this->sendotp($data['mobile'], $otp);
+        Otphistory::create(['mobile_no' => $user->mobile, 'otp' => $otp ]);
+        if($data['role_id'] == 9){
+            Helper::userRegForChat($user->id,3,$user->name,3);
+        }
+
+        return redirect('/verifyotp/signup');
+    }
+
+
+
+
     public function showRegistrationForm(Request $request)
     {
         $input = $request->all();
@@ -155,6 +279,7 @@ class RegisterController extends Controller
             $link =  url($type).'/'.$id;
             session(['url.followuplink' => $link]);
         }
+        //return view('frontend.register');
         return view('auth.register');
     }
 

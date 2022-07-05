@@ -5,6 +5,7 @@ use App\ProductMaster;
 use App\ProductTemplate;
 use App\Category;
 use App\User;
+use App\Order;
 use App\Material;
 use App\PopularProduct;
 use App\Address;
@@ -15,6 +16,7 @@ use App\PopupManager;
 use App\Notification;
 use App\Banner;
 use App\Location;
+use App\Expressinterest;
 
 use Illuminate\Http\Request;
 
@@ -39,7 +41,8 @@ class HomeController extends Controller
     {
 
         $user = auth()->user();
-
+        //print_r($user);
+        //die('sdsd');
         $data['role'] = $user->role_id;
 
         $data['totalCategory'] = Category::where(['is_active' => 1, 'parent_id' => 0])->count();
@@ -60,9 +63,16 @@ class HomeController extends Controller
     
             $data['totalDraftProduct'] = ProductMaster::where(['is_draft' => 1])->count();
     
-            $data['totalUser'] = User::where(['isActive'=> 1, 'role_id' => 1])->count();
-            $data['totalArtisan'] = User::where(['isActive'=> 1, 'role_id' => 2])->count();
-            $data['totalShg'] = User::where(['isActive'=> 1, 'role_id' => 3])->where('city_id','!=',null)->count();
+            $data['totalOrder'] = Order::count();
+            $data['totalInterest'] = Expressinterest::count();
+            $data['totalUser'] = User::where(['role_id' => 1])->count();
+            $data['totalSHGInd'] = User::where(['role_id' => 9])->where('district','!=',null)->count();
+            $data['totalArtisan'] = User::where(['role_id' => 2])->where('district','!=',null)->count();
+            $data['totalSHGSeller'] = User::where(['role_id' => 3])->where('district','!=',null)->count();
+            $data['totalGrothCenter'] = User::where(['role_id' => 7])->where('district','!=',null)->count();
+            $data['totalSarasCenter'] = User::where(['role_id' => 8])->where('district','!=',null)->count();
+            $data['totalSeller'] = User::whereIn('role_id',[2,3,7,8])->where('district','!=',null)->count();
+            $data['totalShg'] = User::where(['role_id' => 3])->where('district','!=',null)->count();
     
             // echo "<pre>"; print_r($data); die("check");
 

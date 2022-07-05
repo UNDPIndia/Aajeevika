@@ -67,7 +67,6 @@ class UserController extends Controller
              
             }
         $userData1  =  $query->get();
-       
         $userData  =  $query->paginate(20);
         if ($request->has('exportdata')) {
             //all listed
@@ -129,12 +128,21 @@ class UserController extends Controller
             }
 
             if ($request->exportlist == 'state') {
-                $innerquery = User::whereIn('users.role_id', [1])->orderBy('id', 'DESC');
-                $innerquery->where('state_id', '=', Input::get('state_name'));
+                // $innerquery = User::whereIn('users.role_id', [1])->orderBy('id', 'DESC');
+                // $innerquery->where('state_id', '=', Input::get('state_name'));
                 
-                $userData1  =  $innerquery->get();
+                // $userData1  =  $innerquery->get();
                 
-
+                $query = DB::table('users')
+                ->leftjoin('states', 'users.state_id', '=', 'states.id')
+                ->leftjoin('cities', 'users.district', '=', 'cities.id')
+                ->leftjoin('addresses', 'users.id', '=', 'addresses.user_id')
+                ->select('users.*', 'cities.name as district_name','states.name as state_name', 'addresses.pincode', 'addresses.address_line_one', 'addresses.address_line_two')
+                //->where('addresses.address_type', 'personal')
+                ->where('users.state_id', '=', Input::get('state_name'))
+                ->where('users.role_id', 1)->orderBy('users.id', 'desc');
+                $userData1  =  $query->get();
+               // $userData = $userData1;
 
                 $data = $userData1;
                 return Excel::create('statesusers', function ($excel) use ($data) {
@@ -152,9 +160,15 @@ class UserController extends Controller
                             $cell->setValue('Mobile');
                         });
                         $sheet->cell('E1', function ($cell) {
-                            $cell->setValue('Type');
+                            $cell->setValue('District');
                         });
-
+                        $sheet->cell('F1', function ($cell) {
+                            $cell->setValue('Address');
+                        });
+                        $sheet->cell('G1', function ($cell) {
+                            $cell->setValue('Pincode');
+                        });
+                        
                         if (!empty($data)) {
                             foreach ($data as $key => $value) {
                                 $i= $key+2;
@@ -162,7 +176,10 @@ class UserController extends Controller
                                 $sheet->cell('B'.$i, $value->name);
                                 $sheet->cell('C'.$i, $value->email);
                                 $sheet->cell('D'.$i, $value->mobile);
-                                $sheet->cell('E'.$i, 'User');
+                                $sheet->cell('E'.$i, $value->district_name ?? 'NA');
+                               
+                                $sheet->cell('F'.$i, $value->address_line_one .' '.$value->address_line_two);
+                                $sheet->cell('G'.$i, $value->pincode ?? 'NA');
                             }
                         }
                     });
@@ -170,10 +187,18 @@ class UserController extends Controller
             }
 
             if ($request->exportlist == 'district') {
-                $innerquery = User::whereIn('users.role_id', [1])->orderBy('id', 'DESC');
-                $innerquery->where('district', '=', Input::get('district_name'));
-                $userData1  =  $innerquery->get();
-
+                // $innerquery = User::whereIn('users.role_id', [1])->orderBy('id', 'DESC');
+                // $innerquery->where('district', '=', Input::get('district_name'));
+                // $userData1  =  $innerquery->get();
+                $query = DB::table('users')
+                ->leftjoin('states', 'users.state_id', '=', 'states.id')
+                ->leftjoin('cities', 'users.district', '=', 'cities.id')
+                ->leftjoin('addresses', 'users.id', '=', 'addresses.user_id')
+                ->select('users.*', 'cities.name as district_name','states.name as state_name', 'addresses.pincode', 'addresses.address_line_one', 'addresses.address_line_two')
+                //->where('addresses.address_type', 'personal')
+                ->where('users.district', '=', Input::get('district_name'))
+                ->where('users.role_id', 1)->orderBy('users.id', 'desc');
+                $userData1  =  $query->get();
                 $data = $userData1;
                 return Excel::create('districtusers', function ($excel) use ($data) {
                     $excel->sheet('mySheet', function ($sheet) use ($data) {
@@ -190,7 +215,13 @@ class UserController extends Controller
                             $cell->setValue('Mobile');
                         });
                         $sheet->cell('E1', function ($cell) {
-                            $cell->setValue('Type');
+                            $cell->setValue('District');
+                        });
+                        $sheet->cell('F1', function ($cell) {
+                            $cell->setValue('Address');
+                        });
+                        $sheet->cell('G1', function ($cell) {
+                            $cell->setValue('Pincode');
                         });
 
                         if (!empty($data)) {
@@ -200,7 +231,10 @@ class UserController extends Controller
                                 $sheet->cell('B'.$i, $value->name);
                                 $sheet->cell('C'.$i, $value->email);
                                 $sheet->cell('D'.$i, $value->mobile);
-                                $sheet->cell('E'.$i, 'User');
+                                $sheet->cell('E'.$i, $value->district_name ?? 'NA');
+                               
+                                $sheet->cell('F'.$i, $value->address_line_one .' '.$value->address_line_two);
+                                $sheet->cell('G'.$i, $value->pincode ?? 'NA');
                             }
                         }
                     });
@@ -219,25 +253,43 @@ class UserController extends Controller
 
             if ($request->exportlist == 'state') {
 
-                $innerquery = User::whereIn('users.role_id', [1])->orderBy('id', 'DESC');
-                $innerquery->where('users.state_id', '=', Input::get('state_name'));
-                $userData1  =  $innerquery->paginate(10);
+                // $innerquery = User::whereIn('users.role_id', [1])->orderBy('id', 'DESC');
+                // $innerquery->where('users.state_id', '=', Input::get('state_name'));
+                // $userData1  =  $innerquery->paginate(10);
+                // $userData = $userData1;
+                $query = DB::table('users')
+                ->leftjoin('states', 'users.state_id', '=', 'states.id')
+                ->leftjoin('cities', 'users.district', '=', 'cities.id')
+                ->leftjoin('addresses', 'users.id', '=', 'addresses.user_id')
+                ->select('users.*', 'cities.name as district_name','states.name as state_name', 'addresses.pincode', 'addresses.address_line_one', 'addresses.address_line_two')
+                //->where('addresses.address_type', 'personal')
+                ->where('users.state_id', '=', Input::get('state_name'))
+                ->where('users.role_id', 1)->orderBy('users.id', 'desc');
+                $userData1  =  $query->paginate(10);
                 $userData = $userData1;
 
             }
 
             if ($request->exportlist == 'district') {
-                $innerquery = User::whereIn('users.role_id', [1])->orderBy('id', 'DESC');
-                $innerquery->where('district', '=', Input::get('district_name'));
-                $userData1  =  $innerquery->paginate(10);
-
+                //echo Input::get('district_name'); die;
+                //$innerquery = User::whereIn('users.role_id', [1])->orderBy('id', 'DESC');
+                //$innerquery->where('district', '=', Input::get('district_name'));
+                //$userData1  =  $innerquery->paginate(10);
+                $query = DB::table('users')
+                ->leftjoin('states', 'users.state_id', '=', 'states.id')
+                ->leftjoin('cities', 'users.district', '=', 'cities.id')
+                ->leftjoin('addresses', 'users.id', '=', 'addresses.user_id')
+                ->select('users.*', 'cities.name as district_name','states.name as state_name', 'addresses.pincode', 'addresses.address_line_one', 'addresses.address_line_two')
+                //->where('addresses.address_type', 'personal')
+                ->where('users.district', '=', Input::get('district_name'))
+                ->where('users.role_id', 1)->orderBy('users.id', 'desc');
+                $userData1  =  $query->paginate(10);
                 $userData = $userData1;
 
             }
         }
 
         $states     = DB::table('states')->where('country_id', '=', 101)->get();
-        //dd($userData);
         return view('user.index', ['userData' => $userData, 'stateList'=>$states]);
     }
 

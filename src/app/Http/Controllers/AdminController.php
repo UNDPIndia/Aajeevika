@@ -9,6 +9,8 @@ use App\ProductMaster;
 use App\RolePermission;
 use App\Permission;
 use App\City;
+use App\Block;
+
 use Auth;
 use DB;
 use Illuminate\Support\Facades\Hash;
@@ -40,9 +42,10 @@ class AdminController extends Controller
     {
         $query = DB::table('users')
             ->join('states', 'users.state_id', '=', 'states.id')
-            ->join('cities', 'users.district', '=', 'cities.id')
-            ->select('users.*', 'cities.name as district_name', 'states.name as state_name')
-            ->whereIn('users.role_id', [4,5])
+            ->leftjoin('cities', 'users.district', '=', 'cities.id')
+            ->leftjoin('blocks', 'users.block', '=', 'blocks.id')
+            ->select('users.*', 'cities.name as district_name', 'blocks.name as block_name','states.name as state_name')
+            ->whereIn('users.role_id', [4,11,5])
             ->orderBy('users.id', 'desc');
             
 
@@ -52,9 +55,10 @@ class AdminController extends Controller
         if ($request->has('s')) {
             $query = DB::table('users')
                 ->join('states', 'users.state_id', '=', 'states.id')
-                ->join('cities', 'users.district', '=', 'cities.id')
+                ->leftjoin('cities', 'users.district', '=', 'cities.id')
                 ->leftjoin('addresses', 'users.id', '=', 'addresses.user_id')
-                ->select('users.*', 'cities.name as district_name', 'states.name as state_name', 'addresses.pincode', 'addresses.address_line_one', 'addresses.address_line_two')
+                ->leftjoin('blocks', 'users.block', '=', 'blocks.id')
+                ->select('users.*', 'cities.name as district_name', 'blocks.name as block_name', 'states.name as state_name', 'addresses.pincode', 'addresses.address_line_one', 'addresses.address_line_two')
 
                 ->where(function ($query1) use ($keyword, $query) {
                     $query1->where('users.name', 'LIKE', '%'.$keyword.'%');
@@ -63,7 +67,7 @@ class AdminController extends Controller
                 })
 
                
-                ->whereIn('users.role_id', [4,5])
+                ->whereIn('users.role_id', [4,11,5])
                 ->orderBy('users.id', 'desc');
         }
         $userData = $query->get();
@@ -73,13 +77,26 @@ class AdminController extends Controller
 
     public function create()
     {
-        $roleList   = Role::wherein('id', [4,5])->get();
+        $roleList   = Role::wherein('id', [4,11,5])->get();
         $states     = DB::table('states')->where('country_id', '=', 101)->get();
+        //$whereIn = [3,20,24,17,18,25];
         $allPermission = Permission::where('status', 1)->get();
-        $districtData =  City::where('state_id', 17)->get();
-        return view('admin.add', ['roleList' => $roleList, 'stateList'=>$states, 'districtData'=>$districtData,  'allPermission' => $allPermission]);
+        $districtData =  City::where('state_id', 39)->where('is_district',1)->get();
+        $blocks = Block::all();
+        return view('admin.add', ['roleList' => $roleList, 'blocks' => $blocks,'stateList'=>$states, 'districtData'=>$districtData,  'allPermission' => $allPermission]);
     }
-
+    public function blockAjax(Request $request)
+    {
+        
+        $city = Block::where('city_id',$request->city_id)->get();
+        $output = '<option value="">Select Block</option>';
+        foreach($city as $c)
+        {
+          
+            $output.='<option value="'.$c->id.'">'.$c->name.'</option>';
+        }
+          print_r($output);
+    }
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -100,7 +117,7 @@ class AdminController extends Controller
                         ->withInput();
         } else {
             $input = $request->all();
-            $input['state_id'] = 17;
+            $input['state_id'] = 39;
             $input['password'] = Hash::make($request->password);
             $input['api_token'] = Str::random(60);
 
@@ -138,20 +155,21 @@ class AdminController extends Controller
         $id =  decrypt($id);
         $adminDetail = User::where(['id' => $id])->first();
 
-        $roleList    = Role::wherein('id', [4,5])->get();
+        $roleList    = Role::wherein('id', [4,11,5])->get();
         $states      = DB::table('states')->where('country_id', '=', 101)->get();
-        $disctrict   = DB::table('cities')->where('state_id', '=', $adminDetail->state_id)->get();
+        $disctrict   = DB::table('cities')->where('state_id', '=', $adminDetail->state_id)->where('is_district',1)->get();
+        //$allPermission = Permission::where('status', 1)->get();
+        //$whereIn = [3,20,24,17,18,25];
         $allPermission = Permission::where('status', 1)->get();
-
         $userPermission = RolePermission::where('user_id', $id)->get();
-
+        $blocks = Block::where('city_id',$adminDetail->district)->get();
         $roleassignedpermission = [];
         
         foreach ($userPermission as $value) {
             $roleassignedpermission[] = $value->permission_id;
         }
 
-        return view('admin.edit', ['adminDetail' => $adminDetail, 'id' => $id, 'roleList' => $roleList, 'stateList'=>$states,'districtList'=>$disctrict, 'allPermission' => $allPermission, 'userPermission' => $roleassignedpermission]);
+        return view('admin.edit', ['blocks' => $blocks , 'adminDetail' => $adminDetail, 'id' => $id, 'roleList' => $roleList, 'stateList'=>$states,'districtList'=>$disctrict, 'allPermission' => $allPermission, 'userPermission' => $roleassignedpermission]);
     }
 
     public function update(Request $request, $id)
@@ -161,8 +179,9 @@ class AdminController extends Controller
             'name'      => 'required',
             'email'     => 'required|email|',
             'mobile'    => 'required|',
-            'district'  => 'required',
-            'state_id'     => 'required',
+            //'district'  => 'required',
+            //'block'  => 'required',
+            //'state_id'     => 'required',
             'role_id'      => 'required',
             'permission'  => 'required'
         ]);
@@ -190,12 +209,7 @@ class AdminController extends Controller
                 }
        
 
-                $userData = DB::table('users')
-               ->join('states', 'users.state_id', '=', 'states.id')
-               ->join('cities', 'users.district', '=', 'cities.id')
-               ->select('users.*', 'cities.name as district_name', 'states.name as state_name')
-               ->whereIn('users.role_id', [4,5])
-               ->get();
+                
                 return redirect('admin/adminuser');
             }
         }
@@ -203,19 +217,16 @@ class AdminController extends Controller
 
     public function destroy($id, $status)
     {
-        $userStatus = User::where('id', $id)->first();
+        $userStatus = User::where('id', decrypt($id))->first();
 
         if ($userStatus) {
             $input['isActive'] = $status;
-            $deleteProduct = ProductMaster::where(['user_id' => $id])->update(['is_active' => $status]);
 
             if ($status == 0) {
                 $block_status = 1;
             } else {
                 $block_status = 0;
             }
-
-
 
             $input['is_blocked_byadmin'] = $block_status;
             $updated = $userStatus->update($input);

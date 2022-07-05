@@ -56,6 +56,14 @@ class ProductCertificationController extends Controller
                 $q->orWhere('pm.product_id_d', $searchString);
             });
         }
+        if (Auth::user()->role_id == '4') {
+            $district = Auth::user()->district;
+            $query->where('users.district', '=', "$district");
+        }
+        if (Auth::user()->role_id == '11') {
+            $block = Auth::user()->block;
+            $query->where('users.block', '=', "$block");
+        } 
         $certificateData =  $query->paginate(10);
 
 

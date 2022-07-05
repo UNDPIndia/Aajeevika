@@ -30,6 +30,13 @@ use App\GrievanceIssueType;
 use App\Grievance;
 use App\GrievanceMessage;
 use App\Survey;
+use App\Sadhan;
+use App\Sarvottam;
+use App\Suvidha;
+use App\SadhanCategory;
+use App\Faq;
+use App\FaqQuestion;
+use App\ChatMessage;
 
 use Illuminate\Support\Facades\Input;
 use DB;
@@ -683,7 +690,7 @@ class ExpressinterestController extends Controller
             foreach($indUser as $indu){
                 $ratingStarAvg = DB::table('ind_ratings')->where('user_id', $indu->id)->avg('rating');
                 
-                $userData[] = ['id'=>$indu->id,'name'=>$indu->name,'organization_name'=>$indu->organization_name,'mobile'=>$indu->mobile,'email'=>$indu->email,'ratingAvgStar' => $ratingStarAvg,'address_line_one'=>$indu->address_registerd->address_line_one,'address_line_two'=>$indu->address_registerd->address_line_two,'block'=>$indu->address_registerd->getBlock->name,'district'=>$indu->address_registerd->getDistrict->name,'state'=>$indu->address_registerd->getState->name,'pincode'=>$indu->address_registerd->pincode];
+                $userData[] = ['id'=>$indu->id,'name'=>$indu->name,'organization_name'=>$indu->organization_name,'mobile'=>$indu->mobile,'email'=>$indu->email,'ratingAvgStar' => $ratingStarAvg,'address_line_one'=>$indu->address_registerd['address_line_one'],'address_line_two'=>$indu->address_registerd['address_line_two'],'block'=>$indu->address_registerd['getBlock']['name'],'district'=>$indu->address_registerd['getDistrict']['name'],'state'=>$indu->address_registerd['getState']['name'],'pincode'=>$indu->address_registerd['pincode']];
             }
         }
        
@@ -806,6 +813,8 @@ public function addIndividualInterest(Request $request) {
     if($listid){
         $listId = explode(',',$listid);
         if(count($listId) > 0){
+            //delete old record if update
+            $deleteAll = IndividualInterest::where('user_id',$request->user_id)->delete();
             foreach($listId as $lid){
                 $orderCreate = IndividualInterest::firstOrNew([
                     'user_id' => $request->user_id,
@@ -1622,9 +1631,137 @@ public function getSurveyList(Request $request) {
         return false;
     }
 }
+
+
+//sadhan.....................
+public function getSadhanList(Request $request) {
+    try{
+        $language = $request->header('language');
+        $catName = 'name_en  as catName';
+        $title = 'title_en  as name';
+        $desc = 'desc_en  as name';
+        if ($language == 'hi') {
+            $title = 'title_hi  as name';
+            $desc = 'desc_en  as name';
+            $catName = 'name_hi  as catName';
+           
+        }
+            $sadhanList = SadhanCategory::select('id',$catName)->with('getSadhan')->where('cat_status',0)->get();
+            //$sadhanList = Sadhan::select('id',$title,$desc,'category_name','youtube_url','created_at')->where('status',0)->get();
+                if($language == 'hi'){
+                    $queryStatus    = "सूची";
+                }else{
+                    $queryStatus = "Sadhan List";
+                }
+                $response   = array('status' => 'true' , 'statusCode' =>200, 'message'=> $queryStatus, "data" => [
+                    'sadhan_list' => $sadhanList ]);
+                return response()->json($response, 201);
+    } catch (Throwable $e) {
+        report($e);
+        return false;
+    }
+}
+public function getSarvottamsList(Request $request) {
+    try{
+        $language = $request->header('language');
+        $title = 'title_en  as name';
+        if ($language == 'hi') {
+            $title = 'title_hi  as name';
+           
+        }
+            $List = Sarvottam::select('id',$title,'download_link','created_at')->where('status',0)->get();
+                if($language == 'hi'){
+                    $queryStatus    = "सूची";
+                }else{
+                    $queryStatus = "Sarvottam List";
+                }
+                $response   = array('status' => 'true' , 'statusCode' =>200, 'message'=> $queryStatus, "data" => [
+                    'list' => $List ]);
+                return response()->json($response, 201);
+    } catch (Throwable $e) {
+        report($e);
+        return false;
+    }
+}
+public function getSuvidhaList(Request $request) {
+    try{
+        $language = $request->header('language');
+        $title = 'title_en  as title';
+        $desc = 'desc_en  as desc';
+        if ($language == 'hi') {
+            $title = 'title_hi  as title';
+            $desc = 'desc_hi  as desc';
+           
+        }
+            $List = Suvidha::select('id',$title,$desc,'image1','image2','image3','image4','created_at')->where('status',0)->get();
+                if($language == 'hi'){
+                    $queryStatus    = "सूची";
+                }else{
+                    $queryStatus = "Suvidha List";
+                }
+                $response   = array('status' => 'true' , 'statusCode' =>200, 'message'=> $queryStatus, "data" => [
+                    'list' => $List ]);
+                return response()->json($response, 201);
+    } catch (Throwable $e) {
+        report($e);
+        return false;
+    }
+}
+
+public function getFaqTopicList(Request $request) {
+    try{
+        $language = $request->header('language');
+        $title = 'topic_en  as title';
+        $question = 'question_en  as question';
+        $desc = 'desc_en  as desc';
+        if ($language == 'hi') {
+            $title = 'topic_hi  as title';
+            $question = 'question_hi  as question';
+            $desc = 'desc_hi  as desc';
+           
+        }
+            $List = Faq::with('getQuestion:id,faq_topic_id,'.$question.','.$desc)->select('id',$title)->where('status',0)->get();
+                if($language == 'hi'){
+                    $queryStatus    = "सूची";
+                }else{
+                    $queryStatus = "Faq List";
+                }
+                $response   = array('status' => 'true' , 'statusCode' =>200, 'message'=> $queryStatus, "data" => [
+                    'list' => $List ]);
+                return response()->json($response, 201);
+    } catch (Throwable $e) {
+        report($e);
+        return false;
+    }
+}
+public function getFaqTopicQuestion(Request $request) {
+    try{
+        $language = $request->header('language');
+        $faq_topic_id = $request->faq_topic_id;
+        $title = 'question_en  as question';
+        $desc = 'desc_en  as desc';
+        if ($language == 'hi') {
+            $title = 'question_hi  as question';
+            $desc = 'desc_en  as desc';
+           
+        }
+            $List = FaqQuestion::select('id',$title,$desc)->where('status',0)->where('faq_topic_id',$faq_topic_id)->get();
+                if($language == 'hi'){
+                    $queryStatus    = "सूची";
+                }else{
+                    $queryStatus = "Faq List";
+                }
+                $response   = array('status' => 'true' , 'statusCode' =>200, 'message'=> $queryStatus, "data" => [
+                    'list' => $List ]);
+                return response()->json($response, 201);
+    } catch (Throwable $e) {
+        report($e);
+        return false;
+    }
+}
 public function addPiceTestingScript(Request $request) {
     try{
-        
+        die;
             $productItem = OrderItem::get();
             foreach($productItem as $val){
                 
@@ -1639,6 +1776,10 @@ public function addPiceTestingScript(Request $request) {
         return false;
     }
 }
+
+
+
+
     //notification function
     public function sendPushNotification(array $device_tokens,array $msg, $device_type)
 	{
@@ -1682,6 +1823,29 @@ public function addPiceTestingScript(Request $request) {
 			curl_close( $ch );
 			//print_r($result);
 			return $result;
+    }
+
+    public function getChatMessages(Request $request) {
+        try {
+            $language = $request->header('language');
+            $message = 'msg_en  as message';
+            if ($language == 'hi') {
+                $message = 'msg_hi  as message';
+               
+            }
+                $chat_message_list = ChatMessage::select('id','msg_en','msg_hi', 'status')->get();
+                    if($language == 'hi'){
+                        $queryStatus    = "चैट संदेश सूची";
+                    }else{
+                        $queryStatus = "Chat Message List";
+                    }
+                    $response   = array('status' => 'true' , 'statusCode' =>200, 'message'=> $queryStatus, "data" => [
+                        'chat_message_list' => $chat_message_list ]);
+                    return response()->json($response, 201);
+        } catch (Throwable $e) {
+            report($e);
+            return false;
+        }
     }
 
     

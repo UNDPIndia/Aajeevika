@@ -53,13 +53,25 @@ class AjaxController extends Controller
 
     public function get_subcats(Request $request)
     {
-        $categoryData = Category::where(['parent_id' => $request->parent_id])->where('is_active',1)->get();
+        $langauge = $request->session()->get('weblangauge');
+        $categoryname = 'name_en as name';
+
+        if ($langauge == 'kn') {
+            $categoryname = 'name_kn as name';
+        }
+        $categoryData = Category::where(['parent_id' => $request->parent_id])->where('is_active',1)->select($categoryname,'slug','id')->get();
         return response()->json(array('data'=> $categoryData), 200);
     }
 
     public function get_material(Request $request)
     {
-        $materialData = Material::where(['subcategory_id' => $request->id])->get();
+        $langauge = $request->session()->get('weblangauge');
+        $material_name = 'name_en as name';
+
+        if ($langauge == 'kn') {
+            $material_name = 'name_kn as name';
+        }
+        $materialData = Material::where(['subcategory_id' => $request->id])->select($material_name,'id')->get();
         return response()->json(array('data'=> $materialData), 200);
     }
 
@@ -139,6 +151,7 @@ class AjaxController extends Controller
 
 
         $shgArtisanIds = ProductMaster::where(['is_draft' => 0, 'is_active' => 1])->groupBy('user_id')->pluck('user_id');
+        
 
         if (count($request->shgartisanId) > 0) {
             $allUserId = $request->shgartisanId;
@@ -148,8 +161,16 @@ class AjaxController extends Controller
 
         // echo "<pre>"; print_r($shgArtisanIds); die("check");
         // 'role_id' => [ 2,3 ],
-        $artisanshg = User::whereIn('id', $shgArtisanIds)->where('name', 'LIKE', "%{$keyword}%")->select('name', 'id', 'profileImage')->paginate(15);
-
+        if (Auth::check() ) {
+            if (Auth::user()->role_id == 2 || Auth::user()->role_id == 3 || Auth::user()->role_id == 7 || Auth::user()->role_id == 8) {
+                $artisanshg = User::where('id', 0)->select('name', 'id', 'profileImage')->paginate(15);
+            }  else {
+                $artisanshg = User::whereIn('id', $shgArtisanIds)->where('name', 'LIKE', "%{$keyword}%")->select('name', 'id', 'profileImage')->paginate(15);
+            }
+        }else{
+            $artisanshg = User::whereIn('id', $shgArtisanIds)->where('name', 'LIKE', "%{$keyword}%")->select('name', 'id', 'profileImage')->paginate(15);
+        }
+        
         $artisanData = json_encode($artisanshg);
         $artisanData = json_Decode($artisanData);
 
@@ -175,24 +196,46 @@ class AjaxController extends Controller
         $ids = json_Decode($ids);
         
         
-        
-        $products = ProductMaster::with('template:id,'.$templatename)
-        ->where(['is_draft' => 0, 'is_active' => 1])
-        ->where(function ($query1) use ($keyword, $query, $ids) {
-            $query1->where($query, 'LIKE', '%'.$keyword.'%');
-            $query1->orWhere('id', '=', $keyword);
-            $query1->where(['is_draft' => 0, 'is_active' => 1]);
-            $query1->orWhereIn('template_id', $ids);
-        })
-        
-        ->select($productname, 'subcategoryId', 'price', 'id', 'image_1', 'template_id', 'is_active')
-        ->paginate(15);
-        
-
-
-
-
-        if (count($request->shgartisanId) > 0) {
+        if (Auth::check() ) {
+            if (Auth::user()->role_id == 2 || Auth::user()->role_id == 3 || Auth::user()->role_id == 7 || Auth::user()->role_id == 8) {
+                
+               $products = ProductMaster::with('template:id,'.$templatename)
+                ->where(['is_draft' => 0, 'is_active' => 1])
+                ->where(function ($query1) use ($keyword,$query, $ids) {
+                    $query1->where($query, 'LIKE', '%'.$keyword.'%');
+                    //$query1->orWhere('id', '=', $keyword);
+                    $query1->where(['user_id' => Auth::user()->id]);
+                   // $query1->orWhereIn('template_id', $ids);
+                })
+                ->select($productname, 'subcategoryId', 'price', 'id', 'image_1', 'template_id', 'is_active')
+                ->paginate(15);
+            }else {
+                $products = ProductMaster::with('template:id,'.$templatename)
+                ->where(['is_draft' => 0, 'is_active' => 1])
+                ->where(function ($query1) use ($keyword, $query, $ids) {
+                    $query1->where($query, 'LIKE', '%'.$keyword.'%');
+                    $query1->orWhere('id', '=', $keyword);
+                    $query1->where(['is_draft' => 0, 'is_active' => 1]);
+                    $query1->orWhereIn('template_id', $ids);
+                }) 
+                ->select($productname, 'subcategoryId', 'price', 'id', 'image_1', 'template_id', 'is_active')
+                ->paginate(15);
+            }
+        }else{
+            $products = ProductMaster::with('template:id,'.$templatename)
+            ->where(['is_draft' => 0, 'is_active' => 1])
+            ->where(function ($query1) use ($keyword, $query, $ids) {
+                $query1->where($query, 'LIKE', '%'.$keyword.'%');
+                $query1->orWhere('id', '=', $keyword);
+                $query1->where(['is_draft' => 0, 'is_active' => 1]);
+                $query1->orWhereIn('template_id', $ids);
+            })
+            ->select($productname, 'subcategoryId', 'price', 'id', 'image_1', 'template_id', 'is_active')
+            ->paginate(15);
+        }
+        //return $products;
+        /* if (count($request->shgartisanId) > 0) {
+            return 'sgsg';
             $allUserId = $request->shgartisanId;
             $products = ProductMaster::with('template:id,'.$templatename)
             ->where(['is_draft' => 0, 'is_active' => 1])
@@ -205,11 +248,9 @@ class AjaxController extends Controller
             // ->orWhereIn('template_id', $ids)
             ->select($productname, 'subcategoryId', 'price', 'id', 'image_1', 'template_id', 'is_active')
             ->paginate(15);
-        }
-
+        } */
         $productData = json_encode($products);
-        $productData = json_Decode($productData);
-
+        $productData = json_decode($productData);
         $paginationData = [
             'current_page' => $productData->current_page,
             'last_page'    => $productData->last_page,
@@ -230,7 +271,7 @@ class AjaxController extends Controller
             ];
         }
 
-
+        //return $productArr;
 
 
 
@@ -307,7 +348,7 @@ class AjaxController extends Controller
 
             if ($item['type'] == "artisanshg") {
                 //dd($item['data']);
-                $html .= "<div class='lehangas-outer enterprise-outer'><div class='container'><div class='product-heading'><div class='row align-items-center'><div class='col-md-12'><h2>Shg/Artisans</h2></div></div></div><div class='lehangas-product'><div class='row'>";
+                $html .= "<div class='lehangas-outer enterprise-outer'><div class='container'><div class='product-heading'><div class='row align-items-center'><div class='col-md-12'><h2>Seller</h2></div></div></div><div class='lehangas-product'><div class='row'>";
 
 
                 foreach ($item['data'] as $shg) {
@@ -325,19 +366,19 @@ class AjaxController extends Controller
                 $html .="</div></div></div></div>";
             }
             if ($item['type'] == "parentCategory") {
-                $html .= "<div class='lehangas-outer enterprise-outer'><div class='container'><div class='product-heading'><div class='row align-items-center'><div class='col-md-12'><h2>Categories</h2></div></div></div><div class='lehangas-product'><div class='row'>";
+                // $html .= "<div class='lehangas-outer enterprise-outer'><div class='container'><div class='product-heading'><div class='row align-items-center'><div class='col-md-12'><h2>Categories</h2></div></div></div><div class='lehangas-product'><div class='row'>";
 
 
-                foreach ($item['data'] as $product) {
-                    $html .= "<div class='col-md-12'><div class='lehangas-product-inner d-flex align-items-center'><div class='lehanga-img'>";
-                    $html .="<a href='".url('category')."/".$product['catSlug']."'>";
-                    $html .="<img src='".asset($product['catImage'])."' alt='lehanga-img1' /></a>";
-                    $html .="</div><div class='lehanga-right'>";
-                    $html .="<a href='".url('category')."/".$product['catSlug']."'>";
-                    $html .="<p class='item-info'>".$product['catName']."</p></a>";
-                    $html .="</div></div></div>";
-                }
-                $html .="</div></div></div></div>";
+                // foreach ($item['data'] as $product) {
+                //     $html .= "<div class='col-md-12'><div class='lehangas-product-inner d-flex align-items-center'><div class='lehanga-img'>";
+                //     $html .="<a href='".url('category')."/".$product['catSlug']."'>";
+                //     $html .="<img src='".asset($product['catImage'])."' alt='lehanga-img1' /></a>";
+                //     $html .="</div><div class='lehanga-right'>";
+                //     $html .="<a href='".url('category')."/".$product['catSlug']."'>";
+                //     $html .="<p class='item-info'>".$product['catName']."</p></a>";
+                //     $html .="</div></div></div>";
+                // }
+                // $html .="</div></div></div></div>";
             }
         }
 
@@ -368,11 +409,12 @@ class AjaxController extends Controller
         $catname = 'name_en  as name';
         $productname = 'localname_en as name';
         $templatename = 'name_en as name';
-
+        $viev_more_text = 'View More';
         if ($language == 'kn') {
             $catname = 'name_kn  as name';
             $productname = 'localname_kn  as name';
             $templatename = 'name_kn as name';
+            $viev_more_text = 'और देखो';
         }
 
         // ->select('id', 'localname_en', 'localname_kn', 'price', 'image_1')
@@ -437,12 +479,13 @@ class AjaxController extends Controller
             $productdata = [];
             // $store['title'] = $value->title;
             $store['name']  = $value->name;
+            $store['organization_name']  = $value->organization_name;
             $store['type']  = 'shg-artisan';
             $store['id']  = $value->id;
 
 
 
-            $product = ProductMaster::where(['user_id' => $value->id, 'is_active' => 1, 'is_draft' => 0])->select('id', 'image_1', 'price', 'template_id', 'localname_kn', 'localname_en')->limit(3)->get();
+            $product = ProductMaster::where(['user_id' => $value->id, 'is_active' => 1, 'is_draft' => 0])->select('id', 'image_1', 'price', 'template_id', 'localname_kn', 'localname_en','product_id_d')->limit(3)->get();
 
 
 
@@ -452,6 +495,7 @@ class AjaxController extends Controller
                 $p['image_1']   = $item->image_1;
                 $p['price']     = $item->price;
                 $p['template_id'] = $item->template_id;
+                $p['product_id_d'] = $item->product_id_d;
 
                 $template = ProductTemplate::where('id', $item->template_id)->select('id', $templatename)->first();
 
@@ -532,14 +576,14 @@ class AjaxController extends Controller
             $html = "";
             $count = count($allProduct);
             foreach ($allProduct as $item) {
-                $html .= "<div class='lehangas-outer enterprise-outer'><div class='container'><div class='product-heading'><div class='row align-items-center'><div class='col-sm-8 col-8'><h2>".$item['name']."</h2></div><div class='col-sm-4 col-4 text-right'><a href='".url('shgstrisan/' . $item['id'])."' class='btn'>View More</a></div></div></div><div class='lehangas-product'><div class='row'>";
+                $html .= "<div class='lehangas-outer enterprise-outer'><div class='container'><div class='product-heading'><div class='row align-items-center'><div class='col-sm-8 col-8'><h2>".$item['organization_name']."</h2></div><div class='col-sm-4 col-4 text-right'><a href='".url('shgstrisan/' . encrypt($item['id']))."' class='btn'>$viev_more_text</a></div></div></div><div class='lehangas-product'><div class='row'>";
                 foreach ($item['data'] as $product) {
                     $html .= "<div class='col-12 col-sm-6 col-md-4'><div class='lehangas-product-inner d-flex align-items-center'><div class='lehanga-img'>";
                     $html .="<a href='".url('product')."/".encrypt($product['id'])."'>";
                     $html .="<img src='".asset($product['image_1'])."' alt='lehanga-img1' /></a>";
                     $html .="</div><div class='lehanga-right'>";
                     $html .="<a href='".url('product')."/".encrypt($product['id'])."'>";
-                    $html .="<p class='item-info'>".$product['template']['name']."<br>(".$product['name'].")</p><p>Pdx ID-".sprintf("%'.06d\n", $product['id'])."</p></a>";
+                    $html .="<p>".$product['product_id_d']."</p><p class='item-info'>".$product['template']['name']."<br>(".$product['name'].")</p></a>";
                     $html .="<p><strong>₹".$product['price']."</strong></p></div></div></div>";
                 }
                 $html .="</div></div></div></div><div class='border-design'></div>";
@@ -829,7 +873,7 @@ class AjaxController extends Controller
      */
     public function getBlockByCityId(Request $request){
 
-        $language = Session::get('weblangauge');
+        $language = $request->session()->get('weblangauge');
        
         $name = 'name';
         if($language == 'kn') {

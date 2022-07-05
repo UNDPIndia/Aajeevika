@@ -62,10 +62,10 @@ class Userlocation
          * Secondary API for LAT LOG by Anshuman
          */
         
-        $ipdat = json_decode(file_get_contents("http://ipinfo.io/".$ip."/json?token=9b642bf9b48d1a"));
-        $logData = explode(',', $ipdat->loc);
-        $lat = $logData[0];
-        $log = $logData[1];
+        // $ipdat = json_decode(file_get_contents("http://ipinfo.io/".$ip."/json?token=9b642bf9b48d1a"));
+        // $logData = explode(',', $ipdat->loc);
+        // $lat = $logData[0];
+        // $log = $logData[1];
         // echo "lat".$lat."<br>";
         // echo "log".$log."<br>";
         // echo "<pre>"; print_r($logData); die("check");
@@ -73,8 +73,8 @@ class Userlocation
           * End
           */
 
-        // $lat = 15.3173;
-        // $log = 75.7139;
+         $lat = 15.3173;
+         $log = 75.7139;
 
         // $lat = $ipdat->geoplugin_latitude;
         // $log = $ipdat->geoplugin_longitude;

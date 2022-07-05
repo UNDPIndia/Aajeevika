@@ -24,7 +24,8 @@ use App\Location;
 use App\Rating;
 use App\IndividualInterest;
 use App\IndRating;
-
+use App\IndAddtinaolInformation;
+use App\Helpers\Helper;
 use Mail;
 
 //add models here
@@ -258,6 +259,7 @@ class LoginController extends Controller
                         if($checkIndividualInterest){
                             $user['selectInterest'] = true;
                         }
+                        Helper::userSignInForChat($user->id,$fcmToken,1);
                     }
                     $statusCode     = 200;
                     $status         = true;
@@ -440,7 +442,9 @@ class LoginController extends Controller
         if ($request->role_id == 1) {
             //$addAddress = Address::create(['user_id' => $user->id,'user_role_id' => $user->role_id, 'country' => $user->country_id, 'state' => $user->state_id, 'district' => $user->district, 'address_type' => 'personal']);
         }
-
+        if($request->role_id == 9){
+            Helper::userRegForChat($user->id,$devicetoken,$user->name,1);
+        }
         $queryStatus;
 
         try {
@@ -1197,6 +1201,7 @@ class LoginController extends Controller
             // echo "<pre>"; print_r($user); die("check");
             $user['selectInterest'] = false;
             $intData = [];
+            $user_info =[];
             if($user->role_id  == 9){
                 $checkIndividualInterest =IndividualInterest::where('user_id',$user->id)->first();
                 if($checkIndividualInterest){
@@ -1213,10 +1218,22 @@ class LoginController extends Controller
                     'reviewCount' => $indratingCount,
                     'ratingAvgStar' => $indratingStarAvg
                 ];
+                $education = 'edu.eng as education';
+                $cast = 'cast.eng as cast';
+                if ($language == 'hi') {
+                    $education = 'edu.hin as education';
+                    $cast = 'cast.hin as cast';
+                }
+               
+                $user_info = IndAddtinaolInformation::where('user_id',$user->id)
+                            ->leftJoin('edu_caste_dropdowns as edu','edu.id','ind_addtinaol_informations.education_qualification')
+                            ->leftJoin('edu_caste_dropdowns as cast','cast.id','ind_addtinaol_informations.caste')
+                            ->select('ind_addtinaol_informations.*',$education, $cast)
+                            ->first();
             }
 
             $response   = array('status' => $status , 'statusCode' =>$statusCode, 'message'=> $queryStatus, 'data' => [
-                'user' => $user, 'address' =>$address, 'rating' => $rating, 'individualInterest' => $intData
+                'user' => $user, 'address' =>$address, 'rating' => $rating, 'individualInterest' => $intData, 'additional_info' => $user_info
             ] );
 
             return response()->json($response, 201);
@@ -1301,7 +1318,7 @@ class LoginController extends Controller
         $rules = [
             'name'  => 'required',
             //'email' => 'required|email'
-        ];
+        ];        
 
         $validator = Validator::make($request->all(), $rules);
 
@@ -1349,6 +1366,45 @@ class LoginController extends Controller
             $query['member_designation'] = $request->member_designation;
 
             // $query['title'] = $request->title;
+        }
+
+        if ($user->role_id == 9) {
+            $validator = Validator::make($request->all(), [
+                'education_qualification' => 'required',
+                'caste' => 'required',
+                'belong_to_shg' => 'required',
+                'livelihood' => 'required',
+                'land_ownership' => 'required_if:livelihood,==,farm',
+                'cultivable_land' => 'required_if:livelihood,==,farm',
+                'dob' => 'required',
+            ]);
+    
+            if ($validator->fails()) {
+                $response = array('status' => false , 'statusCode' =>400);
+                $response['message'] = $validator->messages()->first();
+                return response()->json($response);
+            }
+
+            $user_info = IndAddtinaolInformation::firstOrNew(array('user_id' => $user->id));
+            $user_info->education_qualification = $request->education_qualification;
+            $user_info->caste = $request->caste;
+            $user_info->belong_to_shg = $request->belong_to_shg;
+            $user_info->livelihood = $request->livelihood;
+            $user_info->land_ownership = $request->land_ownership;
+            $user_info->cultivable_land = $request->cultivable_land;
+            $user_info->dob = $request->dob;
+            $user_info->secc = $request->secc;
+            $user_info->annual_income = $request->annual_income;
+            $user_info->save();
+            /* $response = array('status' => true , 'statusCode' =>200);
+            if($language == 'hi'){
+                $response['message'] = "जानकारी सफलतापूर्वक जोड़ी गई";
+            }else{
+                $response['message'] = "Information added successfully!";
+            } */
+
+            //update user name to chat db...
+            Helper::userUpdateForChat($user->id,$user->profileImage,$request->name);
         }
 
         $updateuser = User::where('id', $user->id)->update($query);
@@ -1533,18 +1589,6 @@ class LoginController extends Controller
             if (isset($request->log)) {
                 $log = $request->log;
             }
-
-
-            // if ($user->role_id != 1) {
-            //     $getLocation = Pincode::where('pin_code', $request->pincode)->first();
-
-            //     if (!$getLocation) {
-            //         $response = array('status' => false , 'statusCode' => 400 );
-            //         $response['message'] = "Please enter valid pincode.";
-            //         return response()->json($response);
-            //     }
-            // }
-
 
 
 
@@ -1766,6 +1810,7 @@ class LoginController extends Controller
     
                 $adhar_card_image_name = $adhar_card_image;
                 $adhar_card_user_image = 'images/document/'.$user->id.'/'.$adhar_card_image_name;
+                
             }else{
                 $adhar_card_user_image = NULL;
                 
@@ -1838,6 +1883,7 @@ class LoginController extends Controller
             $updateDocument['adhar_card_no'] = $request->adhar_card_no;
             $updateDocument['adhar_name'] = $request->adhar_name;
             $updateDocument['adhar_card_front_file'] = $adhar_card_user_image;
+            $updateDocument['is_adhar_verify'] = 0;
             $updateDocument['adhar_card_back_file' ] = $adhar_card_user_back_image;
             $updateDocument['adhar_dob'] = $request->adhar_dob;
 
@@ -2127,6 +2173,7 @@ class LoginController extends Controller
                 'adhar_card_back_file'     => $adhar_card_user_back_image,
                 'adhar_dob'          => $request->adhar_dob,
                 'is_aadhar_added'          => 1,
+                'is_adhar_verify' => 0,
             ];
 
             $updateDocument = Documents::where('user_id', $user->id)->update($updateDocument);
@@ -2175,6 +2222,7 @@ class LoginController extends Controller
                 'pancard_file'       => $pan_card_user_image,
                 'pancard_dob'        => $request->pancard_dob,
                 'is_pan_added'        => 1,
+                'is_pan_verify'   =>0,
             ];
 
             $updateDocument = Documents::where('user_id', $user->id)->update($pandata);
@@ -2222,6 +2270,7 @@ class LoginController extends Controller
                 'brn_name'           => $request->brn_name,
                 'brn_file'           => $brn_card_user_image,
                 'is_brn_added'        => 1,
+                'is_brn_verify'     =>0,
             ];
 
             $updateDocument = Documents::where('user_id', $user->id)->update($updatebrn);
@@ -2281,7 +2330,9 @@ class LoginController extends Controller
 
 
         $updateuser = User::where('id', $user->id)->update(['profileImage'=> $image_file_1_image]);
-
+        if($user->role_id == 9){
+            Helper::userUpdateForChat($user->id,$image_file_1_image,$user->name);
+        }
         if($language == 'hi'){
             $queryStatus    = "प्रोफाइल चित्र सफलतापूर्वक अपलोड";
         }else{
@@ -2328,5 +2379,31 @@ class LoginController extends Controller
         }
 
     }
+
+    public function eduCasteDropdowns(Request $request) {
+        
+        try {
+            $language = $request->header('language');
+            $type = $request->type;
+            $name = 'eng  as name';
+            if ($language == 'hi') {
+                $name = 'hin  as name';
+               
+            }
+                $drop_down_list = DB::table('edu_caste_dropdowns')->select('id','type',$name)->where('type',$type)->get();
+                    if($language == 'hi'){
+                        $queryStatus    = "ड्रॉप डाउन सूची";
+                    }else{
+                        $queryStatus = "Drop Down List";
+                    }
+                    $response   = array('status' => 'true' , 'statusCode' =>200, 'message'=> $queryStatus, "data" => [
+                        'drop_down_list' => $drop_down_list ]);
+                    return response()->json($response, 201);
+        } catch (Throwable $e) {
+            report($e);
+            return false;
+        }
+    }
+
 
 }

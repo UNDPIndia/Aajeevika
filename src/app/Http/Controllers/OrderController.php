@@ -8,10 +8,31 @@ use App\Expressinterestitem;
 use Excel;
 use App\User;
 use App\Order;
+use Auth;
 use App\OrderItem;
+use App\RolePermission;
+use App\Permission;
 use Illuminate\Support\Facades\Input;
 class OrderController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth');
+        $this->middleware(function ($request, $next) {
+            $this->id = Auth::user()->id;
+            $userPermission = RolePermission::where('user_id', Auth::user()->id)->get();
+            $permArr = [];
+            foreach ($userPermission as $key => $perm) {
+                $permArr[] = $perm->permission_id;
+            }
+            $permission = Permission::wherein('id', $permArr)->pluck('url')->toArray();
+            $permission[] =  '/admin';
+            if (!in_array('/admin/orders', $permission)) {
+                return redirect('admin');
+            }
+            return $next($request);
+        });
+    }
     public function index(Request $request) {
         $allorder = Order::with('items', 'buyer','items.product', 'seller', 'seller.userdistrict','interest')->latest();
         if ($request->has('s')) {
@@ -24,7 +45,19 @@ class OrderController extends Controller
                 });
                  
         }
-
+        if (Auth::user()->role_id == '4') {
+            $district = Auth::user()->district;
+            $allorder->whereHas('seller', function ($allorder) use ($district) {
+                $allorder->where('district', '=', $district);
+            });
+        }
+        if (Auth::user()->role_id == '11') {
+            $block = Auth::user()->block;
+            $allorder->whereHas('seller', function ($allorder) use ($block) {
+                $allorder->where('block', '=', $block);
+            });
+            
+        }
         $allorder_export_data  =  $allorder->get();
         $allorder  =  $allorder->paginate(10);
         if ($request->has('exportlist')) {

@@ -8,7 +8,7 @@ class IndividualInterestList extends Model
 {
     //
     protected $fillable = [
-        'name_en','name_hi','image', 'status' 
+        'product_id','name_en','name_hi','image', 'status' 
     ];
 
 }

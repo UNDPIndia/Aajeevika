@@ -41,11 +41,13 @@ class LoginController extends Controller
 
     public function logout(Request $request)
     {
+        
         // Auth::logout();
         //Session::flush();
         $this->performLogout($request);
         // return redirect()->route('login');
-        return redirect('/');
+        return redirect('/login');
+        
     }
 
 
@@ -66,13 +68,29 @@ class LoginController extends Controller
             return 'login';
         }
 
-        if ((Auth::user()->role_id == 1) || (Auth::user()->role_id== 2) || (Auth::user()->role_id== 3)) {
+        if (Auth::user()->role_id == 5 || Auth::user()->role_id == 4 || Auth::user()->role_id == 11) {
+            return '/admin';
+        } elseif (Auth::user()->role_id == 2 || Auth::user()->role_id == 3 || Auth::user()->role_id == 7 || Auth::user()->role_id == 8) {
+            return '/profile/home';
+        } elseif (Auth::user()->role_id == 9) {
+            \App\Helpers\Helper::userSignInForChat(Auth::user()->id,'web','3');
+            return '/ind-home';
+        } else {
+            return '/';
+        }
+
+      /*  if ((Auth::user()->role_id == 1) || (Auth::user()->role_id== 2) || (Auth::user()->role_id== 3)) {
             return '/';
         } elseif ((Auth::user()->role_id== 4) || (Auth::user()->role_id== 5)) {
             return '/admin';
         }
+        */
     }
 
+    protected function admin_login()
+    {
+        return view('frontend.login');
+    }
 
 
 
